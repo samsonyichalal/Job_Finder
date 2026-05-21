@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.database import get_db_connection
+from app.services.ai_service import estimate_salary
 from app.middleware.auth_middleware import get_current_user_id
 
 router = APIRouter()
@@ -11,6 +12,16 @@ def get_salary_estimate(role: str = "", location: str = "", level: str = "mid", 
             status_code=400,
             detail="Role parameter is required."
         )
+
+    try:
+        ai_estimate = estimate_salary(role, location, level)
+        if ai_estimate and all(key in ai_estimate for key in ["min", "max", "median", "currency", "disclaimer"]):
+            ai_estimate["role"] = role
+            ai_estimate["location"] = location or "Any"
+            ai_estimate["level"] = level or "mid"
+            return ai_estimate
+    except Exception as ai_error:
+        print(f"Gemini salary estimate failed, using database fallback: {ai_error}")
 
     conn = get_db_connection()
     cursor = conn.cursor()

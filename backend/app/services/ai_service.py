@@ -1,26 +1,70 @@
-import os
 import json
-import anthropic
+import os
+from typing import Any, Dict, List
+
 from dotenv import load_dotenv
-from typing import Dict, Any, List
+from google import genai
+from google.genai import types
 
 load_dotenv()
 
-API_KEY = os.getenv("ANTHROPIC_API_KEY", "your_key_here")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
-def call_claude(system_prompt: str, user_prompt: str) -> str:
-    # Check if a real key is present
-    if not API_KEY or API_KEY == "your_key_here":
-        raise ValueError("Missing Anthropic API Key")
-        
-    client = anthropic.Anthropic(api_key=API_KEY)
-    message = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1500,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_prompt}]
+_GEMINI_CLIENT = None
+
+def _get_gemini_client():
+    global _GEMINI_CLIENT
+    if not GEMINI_API_KEY:
+        raise ValueError("Missing Gemini API Key")
+    if _GEMINI_CLIENT is None:
+        _GEMINI_CLIENT = genai.Client(api_key=GEMINI_API_KEY)
+    return _GEMINI_CLIENT
+
+
+def _extract_response_text(response: Any) -> str:
+    text = getattr(response, "text", None)
+    if text:
+        return text.strip()
+
+    candidates = getattr(response, "candidates", None) or []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) or []
+        for part in parts:
+            part_text = getattr(part, "text", None)
+            if part_text:
+                return part_text.strip()
+
+    return ""
+
+
+def _strip_code_fences(text: str) -> str:
+    cleaned = text.strip()
+    if "```json" in cleaned:
+        cleaned = cleaned.split("```json", 1)[1]
+    elif "```" in cleaned:
+        cleaned = cleaned.split("```", 1)[1]
+
+    if "```" in cleaned:
+        cleaned = cleaned.split("```", 1)[0]
+
+    return cleaned.strip()
+
+
+def call_gemini(system_prompt: str, user_prompt: str, response_mime_type: str = "text/plain") -> str:
+    client = _get_gemini_client()
+    config = types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        temperature=0.2,
+        response_mime_type=response_mime_type,
     )
-    return message.content[0].text
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=user_prompt,
+        config=config,
+    )
+    return _extract_response_text(response)
 
 def analyze_resume(resume_text: str, user_profile: Dict[str, Any]) -> Dict[str, Any]:
     system_prompt = (
@@ -33,12 +77,8 @@ def analyze_resume(resume_text: str, user_profile: Dict[str, Any]) -> Dict[str, 
     
     user_prompt = f"Resume:\n{resume_text}\n\nUser Profile:\n{json.dumps(user_profile)}"
     
-    response_text = call_claude(system_prompt, user_prompt)
-    if "```json" in response_text:
-        response_text = response_text.split("```json")[1].split("```")[0].strip()
-    elif "```" in response_text:
-        response_text = response_text.split("```")[1].split("```")[0].strip()
-    return json.loads(response_text)
+    response_text = call_gemini(system_prompt, user_prompt, response_mime_type="application/json")
+    return json.loads(_strip_code_fences(response_text))
 
 def generate_career_paths(profile: Dict[str, Any]) -> List[Dict[str, Any]]:
     system_prompt = (
@@ -50,12 +90,8 @@ def generate_career_paths(profile: Dict[str, Any]) -> List[Dict[str, Any]]:
     )
     user_prompt = f"User Profile:\n{json.dumps(profile)}"
     
-    response_text = call_claude(system_prompt, user_prompt)
-    if "```json" in response_text:
-        response_text = response_text.split("```json")[1].split("```")[0].strip()
-    elif "```" in response_text:
-        response_text = response_text.split("```")[1].split("```")[0].strip()
-    return json.loads(response_text)
+    response_text = call_gemini(system_prompt, user_prompt, response_mime_type="application/json")
+    return json.loads(_strip_code_fences(response_text))
 
 def estimate_salary(role: str, location: str, level: str) -> Dict[str, Any]:
     system_prompt = (
@@ -66,12 +102,8 @@ def estimate_salary(role: str, location: str, level: str) -> Dict[str, Any]:
     )
     user_prompt = f"Role: {role}, Location: {location}, Level: {level}"
     
-    response_text = call_claude(system_prompt, user_prompt)
-    if "```json" in response_text:
-        response_text = response_text.split("```json")[1].split("```")[0].strip()
-    elif "```" in response_text:
-        response_text = response_text.split("```")[1].split("```")[0].strip()
-    return json.loads(response_text)
+    response_text = call_gemini(system_prompt, user_prompt, response_mime_type="application/json")
+    return json.loads(_strip_code_fences(response_text))
 
 def recommend_courses(skill_gaps: List[str]) -> List[Dict[str, Any]]:
     system_prompt = (
@@ -82,12 +114,8 @@ def recommend_courses(skill_gaps: List[str]) -> List[Dict[str, Any]]:
     )
     user_prompt = f"Skill Gaps: {json.dumps(skill_gaps)}"
     
-    response_text = call_claude(system_prompt, user_prompt)
-    if "```json" in response_text:
-        response_text = response_text.split("```json")[1].split("```")[0].strip()
-    elif "```" in response_text:
-        response_text = response_text.split("```")[1].split("```")[0].strip()
-    return json.loads(response_text)
+    response_text = call_gemini(system_prompt, user_prompt, response_mime_type="application/json")
+    return json.loads(_strip_code_fences(response_text))
 
 def generate_job_explanation(job: Dict[str, Any], profile: Dict[str, Any]) -> str:
     system_prompt = (
@@ -97,9 +125,8 @@ def generate_job_explanation(job: Dict[str, Any], profile: Dict[str, Any]) -> st
     user_prompt = f"Job:\n{json.dumps(job)}\n\nProfile:\n{json.dumps(profile)}"
     
     try:
-        return call_claude(system_prompt, user_prompt)
+        return call_gemini(system_prompt, user_prompt)
     except Exception:
-        # Dynamic, contextual mock explanation
         title = job.get("title", "Software Engineer")
         company = job.get("industry", "Tech")
         req_skills = job.get("required_skills", [])

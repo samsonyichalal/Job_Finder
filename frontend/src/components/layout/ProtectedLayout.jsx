@@ -1,14 +1,24 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
+import MobileBottomNav from "./MobileBottomNav";
 import { UserProvider } from "../../context/UserContext";
 
 export default function ProtectedLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("career_compass_sidebar_collapsed") === "1";
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("career_compass_sidebar_collapsed", isSidebarCollapsed ? "1" : "0");
+  }, [isSidebarCollapsed]);
 
   if (isLoading) {
     return (
@@ -29,16 +39,29 @@ export default function ProtectedLayout() {
 
   return (
     <UserProvider>
-      <div className="min-h-screen bg-background text-text flex flex-col">
-        <Navbar onMenuClick={() => setSidebarOpen(true)} />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="min-h-screen bg-background text-text flex flex-col relative overflow-hidden">
+        <div className="pointer-events-none absolute -top-20 -left-20 w-72 h-72 rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-0 w-72 h-72 rounded-full bg-secondary/10 blur-3xl" />
+        <Navbar
+          onMenuClick={() => setSidebarOpen(true)}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebarCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        />
+        <div className="flex flex-1 overflow-hidden relative z-10">
+          <Sidebar
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            role={user?.role || "job_finder"}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+          />
           <main className="flex-1 overflow-y-auto">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 lg:pb-8">
               <Outlet />
             </div>
           </main>
         </div>
+        <MobileBottomNav role={user?.role || "job_finder"} />
         <Footer />
       </div>
     </UserProvider>

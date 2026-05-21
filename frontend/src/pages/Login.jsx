@@ -28,7 +28,11 @@ export default function Login() {
     setIsLoading(true);
     try {
       const profile = await login(form.email, form.password);
-      if (!profile || !profile.skills || profile.skills.length === 0) {
+      if (profile?.role === "admin") {
+        navigate("/admin/dashboard");
+      } else if (profile?.role === "job_poster") {
+        navigate("/poster/dashboard");
+      } else if (!profile || !profile.skills || profile.skills.length === 0) {
         navigate("/onboarding");
       } else {
         navigate("/dashboard");

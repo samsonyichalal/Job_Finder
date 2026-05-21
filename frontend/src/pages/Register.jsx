@@ -12,7 +12,7 @@ export default function Register() {
   const navigate = useNavigate();
   const { register } = useAuth();
 
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", confirm: "" });
+  const [form, setForm] = useState({ full_name: "", email: "", password: "", confirm: "", role: "job_finder" });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
@@ -37,8 +37,14 @@ export default function Register() {
     if (validationError) { setError(validationError); return; }
     setIsLoading(true);
     try {
-      await register(form.email, form.password, form.full_name);
-      navigate("/onboarding");
+      const profile = await register(form.email, form.password, form.full_name, form.role);
+      if (profile?.role === "admin" || form.role === "admin") {
+        navigate("/admin/dashboard");
+      } else if (profile?.role === "job_poster" || form.role === "job_poster") {
+        navigate("/poster/dashboard");
+      } else {
+        navigate("/onboarding");
+      }
     } catch (err) {
       setError(err?.response?.data?.detail || "Registration failed. Please try again.");
     } finally {
@@ -175,6 +181,29 @@ export default function Register() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">I want to use Career Compass as</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: "job_finder", label: "Job Finder" },
+                    { value: "job_poster", label: "Job Poster" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, role: option.value }))}
+                      className={`py-3 rounded-xl border text-sm font-semibold transition-all ${
+                        form.role === option.value
+                          ? "bg-indigo-500/10 border-indigo-500/40 text-white"
+                          : "bg-slate-950/80 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Full name */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Full Name</label>

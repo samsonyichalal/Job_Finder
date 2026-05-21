@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
       setToken(data.token);
       setIsAuthenticated(true);
       const profile = await careerService.getProfile();
-      setUser(profile);
+      setUser(profile ? { ...profile, role: profile.role || data.role || "job_finder" } : { role: data.role || "job_finder" });
       return profile;
     } catch (error) {
       logout();
@@ -50,16 +50,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (email, password, full_name) => {
+  const register = async (email, password, full_name, role = "job_finder") => {
     setIsLoading(true);
     try {
-      const data = await authService.register(email, password, full_name);
+      const data = await authService.register(email, password, full_name, role);
       localStorage.setItem("cc_token", data.token);
       localStorage.setItem("cc_user_id", data.user_id.toString());
       setToken(data.token);
       setIsAuthenticated(true);
       const profile = await careerService.getProfile();
-      setUser(profile);
+      setUser(profile ? { ...profile, role: profile.role || data.role || role } : { role: data.role || role });
       return profile;
     } catch (error) {
       logout();

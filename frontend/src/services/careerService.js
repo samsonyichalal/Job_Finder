@@ -55,6 +55,58 @@ const careerService = {
   deleteSavedCourse: async (savedCourseId) => {
     const response = await api.delete(`/api/courses/saved/${savedCourseId}`);
     return response.data;
+  },
+  getPosterStats: async () => {
+    const response = await api.get("/api/poster/stats");
+    return response.data;
+  },
+  getPosterJobs: async () => {
+    const response = await api.get("/api/poster/jobs");
+    return response.data;
+  },
+  createPosterJob: async (jobData) => {
+    const response = await api.post("/api/poster/jobs", jobData);
+    return response.data;
+  },
+  updatePosterJob: async (jobId, jobData) => {
+    const response = await api.put(`/api/poster/jobs/${jobId}`, jobData);
+    return response.data;
+  },
+  deletePosterJob: async (jobId) => {
+    const response = await api.delete(`/api/poster/jobs/${jobId}`);
+    return response.data;
+  },
+  getAdminStats: async () => {
+    const response = await api.get("/api/admin/stats");
+    return response.data;
+  },
+  getAdminUsers: async () => {
+    const response = await api.get("/api/admin/users");
+    return response.data;
+  },
+  updateAdminUserRole: async (userId, role) => {
+    const response = await api.put(`/api/admin/users/${userId}/role`, { role });
+    return response.data;
+  },
+  getAdminJobs: async () => {
+    const response = await api.get("/api/admin/jobs");
+    return response.data;
+  },
+  deleteAdminJob: async (jobId) => {
+    const response = await api.delete(`/api/admin/jobs/${jobId}`);
+    return response.data;
+  },
+  getAdminCourses: async () => {
+    const response = await api.get("/api/admin/courses");
+    return response.data;
+  },
+  createAdminCourse: async (payload) => {
+    const response = await api.post("/api/admin/courses", payload);
+    return response.data;
+  },
+  deleteAdminCourse: async (courseId) => {
+    const response = await api.delete(`/api/admin/courses/${courseId}`);
+    return response.data;
   }
 };
 

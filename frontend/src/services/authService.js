@@ -1,8 +1,8 @@
 import api from "./api";
 
 const authService = {
-  register: async (email, password, full_name) => {
-    const response = await api.post("/auth/register", { email, password, full_name });
+  register: async (email, password, full_name, role = "job_finder") => {
+    const response = await api.post("/auth/register", { email, password, full_name, role });
     return response.data;
   },
   login: async (email, password) => {

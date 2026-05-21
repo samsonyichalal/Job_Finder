@@ -41,8 +41,8 @@ def get_course_recommendations(user_id: int = Depends(get_current_user_id)):
     # Cap gaps to top 5
     required_gaps = required_gaps[:5]
     if not required_gaps:
-        # Fallback default gaps if user has everything
-        required_gaps = ["AWS", "Docker", "Figma", "Kubernetes"]
+        conn.close()
+        return []
         
     # 3. Retrieve courses from the database for each gap
     # Fetch all courses
@@ -78,37 +78,11 @@ def get_course_recommendations(user_id: int = Depends(get_current_user_id)):
                     "level": c["level"]
                 })
                 
-        # If database didn't have specific match, create high-quality dynamic fallbacks
-        if not matched_courses:
-            matched_courses = [
-                {
-                    "id": 9991,
-                    "title": f"Mastering {gap} for Beginners",
-                    "platform": "Coursera",
-                    "url": "https://www.coursera.org",
-                    "duration_hours": 15.0,
-                    "cost_type": "free",
-                    "cost_amount": 0.0,
-                    "rating": 4.8,
-                    "level": "beginner"
-                },
-                {
-                    "id": 9992,
-                    "title": f"Ultimate {gap} Bootcamp: Core Concepts",
-                    "platform": "Udemy",
-                    "url": "https://www.udemy.com",
-                    "duration_hours": 28.0,
-                    "cost_type": "paid",
-                    "cost_amount": 14.99,
-                    "rating": 4.6,
-                    "level": "intermediate"
-                }
-            ]
-            
-        recommendations.append({
-            "skill_gap": gap,
-            "courses": matched_courses[:3] # Cap to top 3
-        })
+        if matched_courses:
+            recommendations.append({
+                "skill_gap": gap,
+                "courses": matched_courses[:3]
+            })
         
     conn.close()
     return recommendations

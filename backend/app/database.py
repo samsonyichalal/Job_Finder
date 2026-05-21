@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Determine database path
-DB_PATH = os.getenv("DATABASE_PATH", "database/career_compass.db")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RAW_DB_PATH = os.getenv("DATABASE_PATH", "database/career_compass.db")
+DB_PATH = RAW_DB_PATH if os.path.isabs(RAW_DB_PATH) else os.path.join(BASE_DIR, RAW_DB_PATH)
 
 def get_db_connection():
     # Make sure parent directory exists
@@ -18,6 +19,16 @@ def get_db_connection():
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
+
+def _get_table_columns(cursor, table_name):
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    return {row["name"] for row in cursor.fetchall()}
+
+
+def _ensure_column(cursor, table_name, column_name, definition):
+    if column_name not in _get_table_columns(cursor, table_name):
+        cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
+
 def create_all_tables():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -28,6 +39,7 @@ def create_all_tables():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'job_finder',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -67,7 +79,10 @@ def create_all_tables():
         currency TEXT DEFAULT 'USD',
         location TEXT,
         work_type TEXT,            -- e.g. remote, hybrid, on-site
-        seniority_level TEXT       -- e.g. entry, mid, senior, lead
+        seniority_level TEXT,      -- e.g. entry, mid, senior, lead
+        company_name TEXT,
+        posted_by_user_id INTEGER,
+        FOREIGN KEY(posted_by_user_id) REFERENCES users(id) ON DELETE SET NULL
     );
     """)
     
@@ -116,6 +131,12 @@ def create_all_tables():
     );
     """)
     
+    conn.commit()
+
+    # Lightweight migration support for existing SQLite files.
+    _ensure_column(cursor, "users", "role", "TEXT NOT NULL DEFAULT 'job_finder'")
+    _ensure_column(cursor, "jobs", "company_name", "TEXT")
+    _ensure_column(cursor, "jobs", "posted_by_user_id", "INTEGER")
     conn.commit()
     conn.close()
     print("Database tables verified/created successfully.")

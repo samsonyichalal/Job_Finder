@@ -11,6 +11,13 @@ router = APIRouter()
 def register(user_data: UserRegister):
     conn = get_db_connection()
     cursor = conn.cursor()
+    if user_data.role not in {"job_finder", "job_poster"}:
+        conn.close()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role. Allowed roles are job_finder and job_poster.",
+        )
+    role = user_data.role
     
     # Check if user already exists
     cursor.execute("SELECT id FROM users WHERE email = ?", (user_data.email,))
@@ -26,8 +33,8 @@ def register(user_data: UserRegister):
     try:
         # Insert user
         cursor.execute(
-            "INSERT INTO users (email, password_hash) VALUES (?, ?)",
-            (user_data.email, hashed)
+            "INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)",
+            (user_data.email, hashed, role)
         )
         user_id = cursor.lastrowid
         
@@ -56,7 +63,7 @@ def register(user_data: UserRegister):
         
         conn.commit()
         token = create_token(user_id)
-        return {"token": token, "user_id": user_id}
+        return {"token": token, "user_id": user_id, "role": role}
     except Exception as e:
         conn.rollback()
         raise HTTPException(
@@ -71,7 +78,7 @@ def login(credentials: UserLogin):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id, password_hash FROM users WHERE email = ?", (credentials.email,))
+    cursor.execute("SELECT id, password_hash, role FROM users WHERE email = ?", (credentials.email,))
     user = cursor.fetchone()
     conn.close()
     
@@ -82,4 +89,4 @@ def login(credentials: UserLogin):
         )
         
     token = create_token(user["id"])
-    return {"token": token, "user_id": user["id"]}
+    return {"token": token, "user_id": user["id"], "role": user["role"] or "job_finder"}

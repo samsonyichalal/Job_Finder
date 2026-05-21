@@ -31,6 +31,9 @@ def serialize_row(row):
         d["interests"] = json.loads(d.pop("interests_json", "[]"))
     except Exception:
         d["interests"] = []
+
+    if "role" not in d:
+        d["role"] = "job_finder"
         
     return d
 
@@ -38,7 +41,15 @@ def serialize_row(row):
 def get_profile(user_id: int = Depends(get_current_user_id)):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,))
+    cursor.execute(
+        """
+        SELECT p.*, u.role
+        FROM profiles p
+        JOIN users u ON u.id = p.user_id
+        WHERE p.user_id = ?
+        """,
+        (user_id,)
+    )
     row = cursor.fetchone()
     conn.close()
     

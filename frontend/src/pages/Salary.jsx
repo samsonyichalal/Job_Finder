@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { DollarSign, Search, Sparkles, TrendingUp, MapPin, Briefcase } from "lucide-react";
 import careerService from "../services/careerService";
@@ -7,6 +8,8 @@ import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Input from "../components/ui/Input";
 import formatSalary from "../utils/formatSalary";
+import StatusBanner from "../components/ui/StatusBanner";
+import { getApiErrorInfo } from "../utils/errorUtils";
 
 const LEVELS = ["junior", "mid", "senior", "lead", "principal"];
 
@@ -18,6 +21,7 @@ const POPULAR_ROLES = [
 ];
 
 export default function Salary() {
+  const navigate = useNavigate();
   const [role, setRole] = useState("");
   const [location, setLocation] = useState("");
   const [level, setLevel] = useState("mid");
@@ -34,7 +38,8 @@ export default function Salary() {
       const data = await careerService.getSalaryEstimate(role, location, level);
       setResult(data);
     } catch (e) {
-      setError(e?.response?.data?.detail || "Failed to fetch salary estimate.");
+      const info = getApiErrorInfo(e);
+      setError(info.message || "Failed to fetch salary estimate.");
     } finally {
       setLoading(false);
     }
@@ -100,11 +105,7 @@ export default function Salary() {
           </div>
         </div>
 
-        {error && (
-          <div className="bg-danger/10 border border-danger/20 text-danger text-sm px-4 py-3 rounded-xl">
-            {error}
-          </div>
-        )}
+        {error && <StatusBanner tone="danger" title="Salary estimate unavailable" message={error} actionLabel="Retry" onAction={handleSearch} />}
 
         <Button
           variant="primary"

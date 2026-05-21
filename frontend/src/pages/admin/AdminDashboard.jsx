@@ -2,14 +2,24 @@ import React, { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
 import careerService from "../../services/careerService";
 import Card from "../../components/ui/Card";
+import StatusBanner from "../../components/ui/StatusBanner";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
-      const data = await careerService.getAdminStats();
-      setStats(data);
+      try {
+        const data = await careerService.getAdminStats();
+        setStats(data);
+      } catch (err) {
+        console.error("Admin dashboard load error", err);
+        setError("Some admin metrics could not be loaded.");
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
@@ -33,11 +43,21 @@ export default function AdminDashboard() {
         <p className="text-sm text-muted mt-1">System overview from live SQLite data.</p>
       </div>
 
+      {error && (
+        <StatusBanner
+          tone="warning"
+          title="Partial admin metrics"
+          message={error}
+          actionLabel="Retry"
+          onAction={() => window.location.reload()}
+        />
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {items.map((item) => (
           <Card key={item.label} className="p-5">
             <p className="text-xs uppercase tracking-wider text-muted font-bold">{item.label}</p>
-            <p className="text-3xl font-black text-white mt-2">{item.value}</p>
+            <p className="text-3xl font-black text-white mt-2">{loading ? "—" : item.value}</p>
           </Card>
         ))}
       </div>

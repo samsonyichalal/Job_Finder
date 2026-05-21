@@ -8,6 +8,7 @@ import StepWizard from "../components/forms/StepWizard";
 import SkillsInput from "../components/forms/SkillsInput";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
+import StatusBanner from "../components/ui/StatusBanner";
 
 const STEPS = ["Identity", "Skills", "Experience", "Goals"];
 
@@ -74,7 +75,7 @@ export default function Onboarding() {
       };
       await careerService.saveProfile(payload);
       const updated = await careerService.getProfile();
-      if (setUser) setUser(updated);
+      if (setUser) setUser({ ...updated, profileComplete: true });
       navigate("/dashboard");
     } catch (err) {
       setError(err?.response?.data?.detail || "Failed to save profile. Please try again.");
@@ -119,9 +120,7 @@ export default function Onboarding() {
         </div>
 
         {error && (
-          <div className="bg-danger/10 border border-danger/20 text-danger text-sm px-4 py-3 rounded-xl mb-6 text-center">
-            {error}
-          </div>
+          <StatusBanner tone="danger" title="Could not save onboarding" message={error} />
         )}
 
         <StepWizard

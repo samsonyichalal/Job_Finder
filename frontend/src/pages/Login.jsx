@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Compass, Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff, Sparkles } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import Button from "../components/ui/Button";
+import { getApiErrorInfo } from "../utils/errorUtils";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -28,17 +29,20 @@ export default function Login() {
     setIsLoading(true);
     try {
       const profile = await login(form.email, form.password);
-      if (profile?.role === "admin") {
+      const resolvedRole = profile?.role || localStorage.getItem("cc_role") || "job_finder";
+      const profileReady = Boolean(profile?.profileComplete || profile?.skills?.length || profile?.education?.length || profile?.experience?.length);
+      if (resolvedRole === "admin") {
         navigate("/admin/dashboard");
-      } else if (profile?.role === "job_poster") {
+      } else if (resolvedRole === "job_poster") {
         navigate("/poster/dashboard");
-      } else if (!profile || !profile.skills || profile.skills.length === 0) {
+      } else if (!profileReady) {
         navigate("/onboarding");
       } else {
         navigate("/dashboard");
       }
     } catch (err) {
-      setError(err?.response?.data?.detail || "Invalid email or password.");
+      const info = getApiErrorInfo(err);
+      setError(info.message || "Invalid email or password.");
     } finally {
       setIsLoading(false);
     }

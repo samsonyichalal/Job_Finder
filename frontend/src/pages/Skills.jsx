@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Award, CheckCircle2, AlertCircle, Clock, RefreshCw, Zap } from "lucide-react";
 import careerService from "../services/careerService";
@@ -7,12 +8,16 @@ import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import Card from "../components/ui/Card";
 import useAuth from "../hooks/useAuth";
+import StatusBanner from "../components/ui/StatusBanner";
+import { getApiErrorInfo } from "../utils/errorUtils";
 
 export default function Skills() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [skillGap, setSkillGap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const profileReady = Boolean(user?.profileComplete || user?.skills?.length || user?.education?.length || user?.experience?.length || user?.full_name);
 
   const fetchGap = async () => {
     setLoading(true);
@@ -21,7 +26,8 @@ export default function Skills() {
       const data = await careerService.getSkillsGap();
       setSkillGap(data);
     } catch (e) {
-      setError("Failed to load skill gap analysis.");
+      const info = getApiErrorInfo(e);
+      setError(info.message || "Failed to load skill gap analysis.");
     } finally {
       setLoading(false);
     }
@@ -68,10 +74,18 @@ export default function Skills() {
         </Button>
       </div>
 
+      {!profileReady && (
+        <StatusBanner
+          tone="info"
+          title="Skill analysis works best with a profile"
+          message="Add your skills, experience, and goals so we can map the gaps accurately."
+          actionLabel="Complete profile"
+          onAction={() => navigate("/onboarding")}
+        />
+      )}
+
       {error && (
-        <div className="bg-danger/10 border border-danger/20 text-danger text-sm px-4 py-3 rounded-xl">
-          {error}
-        </div>
+        <StatusBanner tone="danger" title="Could not load skill analysis" message={error} actionLabel="Retry" onAction={fetchGap} />
       )}
 
       {loading ? (

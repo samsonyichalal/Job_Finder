@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Sparkles, CheckCircle2, AlertCircle,
@@ -8,17 +9,27 @@ import careerService from "../services/careerService";
 import ResumeTextArea from "../components/forms/ResumeTextArea";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
+import StatusBanner from "../components/ui/StatusBanner";
+import useAuth from "../hooks/useAuth";
+import { getApiErrorInfo } from "../utils/errorUtils";
 
 export default function Resume() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [resumeText, setResumeText] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showBullets, setShowBullets] = useState(false);
+  const profileReady = Boolean(user?.profileComplete || user?.skills?.length || user?.education?.length || user?.experience?.length || user?.full_name);
 
   const handleAnalyze = async () => {
     if (!resumeText.trim()) {
       setError("Please paste your resume text before analyzing.");
+      return;
+    }
+    if (!profileReady) {
+      setError("Complete your profile first to unlock resume analysis.");
       return;
     }
     setLoading(true);
@@ -28,7 +39,8 @@ export default function Resume() {
       const data = await careerService.analyzeResume(resumeText);
       setAnalysis(data);
     } catch (e) {
-      setError(e?.response?.data?.detail || "Analysis failed. Make sure your profile is complete.");
+      const info = getApiErrorInfo(e);
+      setError(info.message || "Analysis failed. Make sure your profile is complete.");
     } finally {
       setLoading(false);
     }
@@ -60,21 +72,28 @@ export default function Resume() {
         </p>
       </div>
 
+      {!profileReady && (
+        <StatusBanner
+          tone="info"
+          title="Complete your profile first"
+          message="Resume analysis needs your onboarding profile so the AI can compare your background against the resume text."
+          actionLabel="Go to onboarding"
+          onAction={() => navigate("/onboarding")}
+        />
+      )}
+
       {/* Input area */}
       <Card className="p-6 space-y-4">
         <ResumeTextArea value={resumeText} onChange={setResumeText} />
 
         {error && (
-          <div className="flex items-center gap-2 bg-danger/10 border border-danger/20 text-danger text-sm px-4 py-3 rounded-xl">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
-          </div>
+          <StatusBanner tone="danger" title="Resume analysis could not run" message={error} />
         )}
 
         <Button
           variant="primary"
           onClick={handleAnalyze}
-          disabled={loading || !resumeText.trim()}
+          disabled={loading || !resumeText.trim() || !profileReady}
           className="w-full py-3 font-bold flex items-center justify-center gap-2"
         >
           {loading ? (
@@ -85,7 +104,7 @@ export default function Resume() {
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              Analyze Resume
+              {profileReady ? "Analyze Resume" : "Complete profile to analyze"}
             </>
           )}
         </Button>

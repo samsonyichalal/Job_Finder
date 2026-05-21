@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import Button from "../components/ui/Button";
+import { getApiErrorInfo } from "../utils/errorUtils";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -38,15 +39,20 @@ export default function Register() {
     setIsLoading(true);
     try {
       const profile = await register(form.email, form.password, form.full_name, form.role);
-      if (profile?.role === "admin" || form.role === "admin") {
+      const resolvedRole = profile?.role || form.role;
+      const profileReady = Boolean(profile?.profileComplete || profile?.skills?.length || profile?.education?.length || profile?.experience?.length);
+      if (resolvedRole === "admin") {
         navigate("/admin/dashboard");
-      } else if (profile?.role === "job_poster" || form.role === "job_poster") {
+      } else if (resolvedRole === "job_poster") {
         navigate("/poster/dashboard");
-      } else {
+      } else if (!profileReady) {
         navigate("/onboarding");
+      } else {
+        navigate("/dashboard");
       }
     } catch (err) {
-      setError(err?.response?.data?.detail || "Registration failed. Please try again.");
+      const info = getApiErrorInfo(err);
+      setError(info.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }

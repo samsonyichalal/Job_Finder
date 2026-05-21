@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { TrendingUp, RefreshCw, Sparkles, Map } from "lucide-react";
 import careerService from "../services/careerService";
 import PathCard from "../components/cards/PathCard";
 import Button from "../components/ui/Button";
+import StatusBanner from "../components/ui/StatusBanner";
+import useAuth from "../hooks/useAuth";
+import { getApiErrorInfo } from "../utils/errorUtils";
 
 export default function Career() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [paths, setPaths] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const profileReady = Boolean(user?.profileComplete || user?.skills?.length || user?.education?.length || user?.experience?.length || user?.full_name);
 
   const fetchPaths = async () => {
     setLoading(true);
@@ -17,7 +24,8 @@ export default function Career() {
       const data = await careerService.getCareerPaths();
       setPaths(data || []);
     } catch (e) {
-      setError("Failed to load career paths. Make sure your profile is complete.");
+      const info = getApiErrorInfo(e);
+      setError(info.message || "Failed to load career paths. Make sure your profile is complete.");
     } finally {
       setLoading(false);
     }
@@ -50,6 +58,16 @@ export default function Career() {
         </Button>
       </div>
 
+      {!profileReady && (
+        <StatusBanner
+          tone="info"
+          title="Career paths need your profile"
+          message="Add skills, experience, and goals in onboarding so the AI can generate meaningful trajectories."
+          actionLabel="Complete profile"
+          onAction={() => navigate("/onboarding")}
+        />
+      )}
+
       {/* Info banner */}
       <div className="bg-purple-950/30 border border-purple-500/20 rounded-2xl p-4 flex gap-3 items-start">
         <Sparkles className="w-4 h-4 text-purple-400 shrink-0 mt-0.5 animate-pulse" />
@@ -63,9 +81,7 @@ export default function Career() {
 
       {/* Error */}
       {error && (
-        <div className="bg-danger/10 border border-danger/20 text-danger text-sm px-4 py-3 rounded-xl">
-          {error}
-        </div>
+        <StatusBanner tone="danger" title="Could not load career paths" message={error} actionLabel="Retry" onAction={fetchPaths} />
       )}
 
       {/* Loading skeleton */}

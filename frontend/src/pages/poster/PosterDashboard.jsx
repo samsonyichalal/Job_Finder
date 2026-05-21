@@ -5,12 +5,14 @@ import { Briefcase, PlusCircle, ClipboardList, TrendingUp } from "lucide-react";
 import careerService from "../../services/careerService";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import StatusBanner from "../../components/ui/StatusBanner";
 
 export default function PosterDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ job_count: 0 });
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -21,6 +23,9 @@ export default function PosterDashboard() {
         ]);
         setStats(posterStats || { job_count: 0 });
         setJobs(posterJobs || []);
+      } catch (err) {
+        console.error("Poster dashboard load error", err);
+        setError("Some employer data could not load right now.");
       } finally {
         setLoading(false);
       }
@@ -43,6 +48,16 @@ export default function PosterDashboard() {
           Post a Job
         </Button>
       </div>
+
+      {error && (
+        <StatusBanner
+          tone="warning"
+          title="Partial employer dashboard data"
+          message={error}
+          actionLabel="Retry"
+          onAction={() => window.location.reload()}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-5">
@@ -73,7 +88,15 @@ export default function PosterDashboard() {
         {loading ? (
           <div className="h-32 bg-slate-900/40 rounded-xl animate-pulse" />
         ) : jobs.length === 0 ? (
-          <p className="text-sm text-muted">You have not posted any jobs yet.</p>
+          <div className="text-center py-10 border border-dashed border-border/70 rounded-xl bg-card/40">
+            <p className="text-sm text-white font-semibold">No posted jobs yet</p>
+            <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
+              Post your first role to start tracking applicants and managing your pipeline.
+            </p>
+            <Button variant="primary" size="sm" onClick={() => navigate("/poster/post-job")} className="mt-4">
+              Post your first job
+            </Button>
+          </div>
         ) : (
           <div className="space-y-3">
             {jobs.slice(0, 3).map((job) => (

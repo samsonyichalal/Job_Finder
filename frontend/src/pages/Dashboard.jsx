@@ -12,6 +12,7 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import formatSalary from "../utils/formatSalary";
+import StatusBanner from "../components/ui/StatusBanner";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [skillGap, setSkillGap] = useState(null);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -35,6 +37,7 @@ export default function Dashboard() {
         setCourses(c || []);
       } catch (e) {
         console.error("Dashboard load error", e);
+        setError("Some dashboard data could not load. You can still continue using the app, but parts of the dashboard may be incomplete.");
       } finally {
         setLoading(false);
       }
@@ -48,6 +51,10 @@ export default function Dashboard() {
   const totalCourses = courses.reduce((acc, g) => acc + (g.courses?.length || 0), 0);
 
   const firstName = user?.full_name?.split(" ")[0] || "Professional";
+  const profileReady = Boolean(user?.profileComplete || user?.skills?.length || user?.education?.length || user?.experience?.length || user?.full_name);
+  const profileScore = [user?.full_name, user?.location, user?.skills?.length > 0, user?.education?.length > 0, user?.experience?.length > 0, user?.short_term_goal, user?.long_term_goal]
+    .filter(Boolean).length;
+  const profilePercent = Math.round((profileScore / 7) * 100);
 
   const quickLinks = [
     { label: "View Job Matches", path: "/jobs", icon: Briefcase, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20" },
@@ -55,6 +62,8 @@ export default function Dashboard() {
     { label: "Skills Gap", path: "/skills", icon: Award, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
     { label: "Browse Courses", path: "/courses", icon: BookOpen, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
   ];
+
+  const hasDashboardData = Boolean(jobs.length || missingCount || hasCount || totalCourses);
 
   return (
     <div className="space-y-8">
@@ -67,6 +76,18 @@ export default function Dashboard() {
       >
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight">
+
+      {error && (
+        <StatusBanner
+          tone="warning"
+          title="Partial dashboard data"
+          message={error}
+          actionLabel="Refresh profile"
+          onAction={() => navigate("/profile")}
+          secondaryLabel="Retry"
+          onSecondaryAction={() => window.location.reload()}
+        />
+      )}
             Welcome back, {firstName} 👋
           </h1>
           <p className="text-sm text-muted mt-1">
@@ -130,6 +151,34 @@ export default function Dashboard() {
         </motion.div>
       )}
 
+      {!profileReady && (
+        <StatusBanner
+          tone="info"
+          title="Complete your profile to unlock better results"
+          message="Your dashboard is live, but the AI features will be much stronger once you add skills, experience, and goals."
+          actionLabel="Complete profile"
+          onAction={() => navigate("/onboarding")}
+        />
+      )}
+
+      <Card className="p-5 border-dashed border-border/80 bg-card/40">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Profile completeness</p>
+            <h3 className="text-base font-bold text-white mt-1">{profilePercent}% complete</h3>
+            <p className="text-sm text-muted mt-1">Add more detail to improve matching, salary estimates, and course recommendations.</p>
+          </div>
+          <div className="w-full sm:w-56">
+            <div className="h-2 rounded-full bg-slate-900 overflow-hidden border border-border/60">
+              <div className="h-full bg-gradient-to-r from-primary to-secondary" style={{ width: `${profilePercent}%` }} />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted font-semibold mt-2">
+              <span>Basic</span><span>Ready</span><span>Complete</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Stats row */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -189,6 +238,20 @@ export default function Dashboard() {
           );
         })}
       </motion.div>
+
+      {!hasDashboardData && !loading && (
+        <Card className="p-6 text-center border-dashed border-border/80 bg-card/40">
+          <Sparkles className="w-10 h-10 text-primary mx-auto mb-3" />
+          <h3 className="text-base font-bold text-white">Your dashboard is ready to personalize</h3>
+          <p className="text-sm text-muted mt-2 max-w-xl mx-auto">
+            Complete your profile and explore the sections below to generate meaningful AI insights.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+            <Button variant="primary" onClick={() => navigate("/onboarding")}>Complete profile</Button>
+            <Button variant="ghost" onClick={() => navigate("/jobs")}>View matches</Button>
+          </div>
+        </Card>
+      )}
 
       {/* Top job match + skill gaps side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

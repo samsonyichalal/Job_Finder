@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Briefcase, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 import careerService from "../services/careerService";
 import JobCard from "../components/cards/JobCard";
 import Button from "../components/ui/Button";
+import StatusBanner from "../components/ui/StatusBanner";
+import useAuth from "../hooks/useAuth";
+import { getApiErrorInfo } from "../utils/errorUtils";
 
 export default function Jobs() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filterLevel, setFilterLevel] = useState("All");
+  const profileReady = Boolean(user?.profileComplete || user?.skills?.length || user?.education?.length || user?.experience?.length || user?.full_name);
 
   const levels = ["All", "Entry", "Mid", "Senior", "Lead"];
 
@@ -23,7 +30,8 @@ export default function Jobs() {
       setJobs(data || []);
       setFiltered(data || []);
     } catch (e) {
-      setError("Failed to load job matches. Make sure your profile is complete.");
+      const info = getApiErrorInfo(e);
+      setError(info.message || "Failed to load job matches. Make sure your profile is complete.");
     } finally {
       setLoading(false);
     }
@@ -75,6 +83,16 @@ export default function Jobs() {
         </Button>
       </div>
 
+      {!profileReady && (
+        <StatusBanner
+          tone="info"
+          title="Job matches need a completed profile"
+          message="Finish onboarding to get accurate match scores, skill gaps, and explanation text."
+          actionLabel="Complete profile"
+          onAction={() => navigate("/onboarding")}
+        />
+      )}
+
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -116,9 +134,7 @@ export default function Jobs() {
 
       {/* Error */}
       {error && (
-        <div className="bg-danger/10 border border-danger/20 text-danger text-sm px-4 py-3 rounded-xl">
-          {error}
-        </div>
+        <StatusBanner tone="danger" title="Could not load job matches" message={error} actionLabel="Retry" onAction={fetchJobs} />
       )}
 
       {/* Loading skeleton */}

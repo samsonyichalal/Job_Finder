@@ -1,18 +1,25 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, RefreshCw, Bookmark, BookmarkCheck, ChevronDown, ChevronUp } from "lucide-react";
 import careerService from "../services/careerService";
 import CourseCard from "../components/cards/CourseCard";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
+import StatusBanner from "../components/ui/StatusBanner";
+import useAuth from "../hooks/useAuth";
+import { getApiErrorInfo } from "../utils/errorUtils";
 
 export default function Courses() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [recommendations, setRecommendations] = useState([]);
   const [savedCourses, setSavedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("recommended");
   const [expandedGaps, setExpandedGaps] = useState({});
+  const profileReady = Boolean(user?.profileComplete || user?.skills?.length || user?.education?.length || user?.experience?.length || user?.full_name);
 
   const fetchData = async () => {
     setLoading(true);
@@ -29,7 +36,8 @@ export default function Courses() {
         setExpandedGaps({ 0: true });
       }
     } catch (e) {
-      setError("Failed to load courses. Make sure your profile is complete.");
+      const info = getApiErrorInfo(e);
+      setError(info.message || "Failed to load courses. Make sure your profile is complete.");
     } finally {
       setLoading(false);
     }
@@ -87,6 +95,16 @@ export default function Courses() {
         </Button>
       </div>
 
+      {!profileReady && (
+        <StatusBanner
+          tone="info"
+          title="Courses are personalized from your profile"
+          message="Complete onboarding so we can recommend the right learning resources for your gaps."
+          actionLabel="Complete profile"
+          onAction={() => navigate("/onboarding")}
+        />
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 bg-card/60 border border-border/80 rounded-xl p-1 w-fit">
         {[
@@ -112,9 +130,7 @@ export default function Courses() {
       </div>
 
       {error && (
-        <div className="bg-danger/10 border border-danger/20 text-danger text-sm px-4 py-3 rounded-xl">
-          {error}
-        </div>
+        <StatusBanner tone="danger" title="Could not load courses" message={error} actionLabel="Retry" onAction={fetchData} />
       )}
 
       {loading ? (

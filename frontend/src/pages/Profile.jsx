@@ -10,6 +10,7 @@ import SkillsInput from "../components/forms/SkillsInput";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
+import StatusBanner from "../components/ui/StatusBanner";
 import formatSalary from "../utils/formatSalary";
 
 const WORK_PREFS = ["remote", "hybrid", "onsite"];
@@ -98,7 +99,7 @@ export default function Profile() {
       };
       await careerService.saveProfile(payload);
       const updated = await careerService.getProfile();
-      if (setUser) setUser(updated);
+      if (setUser) setUser({ ...updated, profileComplete: true });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (e) {
@@ -153,10 +154,7 @@ export default function Profile() {
         </motion.div>
       )}
       {error && (
-        <div className="flex items-center gap-2 bg-danger/10 border border-danger/20 text-danger text-sm px-4 py-3 rounded-xl">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          {error}
-        </div>
+        <StatusBanner tone="danger" title="Profile save failed" message={error} />
       )}
 
       {/* Section nav */}
